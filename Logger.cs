@@ -2,7 +2,7 @@
 
 namespace SimpleLogger
 {
-    public class Logger
+    public class Logger//
     {
         //////////////// IT IS VERY(!) SIMPLE LOGGER (don't rate it please) ////////////////
         private string CRLF = "\n";
