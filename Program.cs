@@ -14,7 +14,7 @@ namespace TestServiceCloud
             Logger log = new Logger(debug);
             string[] arguments = Environment.GetCommandLineArgs();
             List<string> paths = ArgumentsParser.GetFilesPaths(arguments);
-            DataParser parser = DataParser.GetInstance();
+            DataParser parser = new DataParser();
             List<ConnectionString> dataList = parser.GetAllData(paths);
             DataSaver saver = DataSaver.GetInstance();
             saver.SaveToFiles(dataList, quantityOfFiles);

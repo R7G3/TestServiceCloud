@@ -11,15 +11,6 @@ namespace TestServiceCloud
     {
         private Logger log = new Logger(Program.debug);
 
-        private static DataParser instance;
-
-        public static DataParser GetInstance()
-        {
-            if (instance == null)
-                instance = new DataParser();
-            return instance;
-        }
-
         public List<ConnectionString> GetAllData(List<string> paths)
         {
             List<ConnectionString> allData = new List<ConnectionString>();
@@ -152,10 +143,6 @@ namespace TestServiceCloud
                 log.Warn("Невалидная строка: " + line + "\nбудет записана в bad_data.txt");
             }
             return parsedData;
-        }
-
-        private DataParser()
-        {
         }
     }
 }
