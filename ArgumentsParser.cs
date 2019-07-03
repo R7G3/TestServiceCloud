@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using SimpleLogger;
 
-namespace TestServiceCloud//
+namespace TestServiceCloud
 {
     static class ArgumentsParser
     {
