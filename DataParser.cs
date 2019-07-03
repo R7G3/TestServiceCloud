@@ -105,7 +105,7 @@ namespace TestServiceCloud
             }
             parsedData.Add("Source", line);
 
-            try
+            try //TODO: этому методу требуется рефакторинг
             {
                 string[] Connect = line.Split(Equally, 2, StringSplitOptions.RemoveEmptyEntries);
                 string[] SrvrRfrn = Connect[1].Split(Semicolon, 2, StringSplitOptions.RemoveEmptyEntries);
