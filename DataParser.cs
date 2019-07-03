@@ -11,6 +11,15 @@ namespace TestServiceCloud
     {
         private Logger log = new Logger(Program.debug);
 
+        //split separators:
+        static readonly char[] equally = { '=' };
+        static readonly char[] semicolon = { ';' };
+        static readonly char[] colon = { ':' };
+        static readonly char[] quote = { '\"' };
+
+        string header = string.Empty;
+        bool isPreviousHeader = false;
+
         public List<ConnectionString> GetAllData(List<string> paths)
         {
             List<ConnectionString> allData = new List<ConnectionString>();
@@ -28,39 +37,43 @@ namespace TestServiceCloud
             int counter = 0;
             FileStream file = new FileStream(path, FileMode.Open);
             StreamReader reader = new StreamReader(file);
-            Regexes pattern = new Regexes();
             List<ConnectionString> data = new List<ConnectionString>();
-            string header = String.Empty;
-            bool isPreviousHeader = false;
 
             while ((line = reader.ReadLine()) != null)
             {
-                if (Regex.IsMatch(line, pattern.HeaderString))
-                {
-                    header = line;
-                    isPreviousHeader = true;
-                }
-                if (Regex.IsMatch(line, pattern.ConnectFileString) || Regex.IsMatch(line, pattern.ConnectServerString)) ////if (Regex.IsMatch(line, pattern.ConnectFileString))
-                {
-                    if(isPreviousHeader)
-                    {
-                        var parsed = ParseData(line, header);
-                        var created = CreateConnectionString(parsed);
-                        data.Add(created);
-                        isPreviousHeader = false;
-                        header = String.Empty;
-                    }
-                    else
-                    {
-                        var parsed = ParseData(line, header, true);
-                        var created = CreateConnectionString(parsed);
-                        data.Add(created);
-                        log.Warn("Строка подключения: " + line + "\nне имеет заголовка и будет записана в bad_data.txt");
-                    }
-                }
+                data.Add(ParseFileLine(line));
                 counter++;
             }
             file.Close();
+            return data;
+        }
+
+        private ConnectionString ParseFileLine(string line)
+        {
+            ConnectionString data = new ConnectionString();
+            bool isConnectionString = (Regex.IsMatch(line, Regexes.ConnectFileString) || Regex.IsMatch(line, Regexes.ConnectServerString));
+            if (Regex.IsMatch(line, Regexes.HeaderString))
+            {
+                header = line;
+                isPreviousHeader = true;
+            }
+            if (isConnectionString)
+            {
+                if (isPreviousHeader)
+                {
+                    var parsed = ParseData(line, header);
+                    data = CreateConnectionString(parsed);
+                    isPreviousHeader = false;
+                    header = String.Empty;
+                }
+                else
+                {
+                    var parsed = ParseData(line, header, true);
+                    var created = CreateConnectionString(parsed);
+                    data = CreateConnectionString(parsed);
+                    log.Warn("Строка подключения: " + line + "\nне имеет заголовка и будет записана в bad_data.txt");
+                }
+            }
             return data;
         }
 
@@ -68,30 +81,24 @@ namespace TestServiceCloud
         {
             ConnectionString data = new ConnectionString();
             if (parsedData.ContainsKey("Header"))
-                data.Header = parsedData["Header"];
+                parsedData.TryGetValue("Header", out data.Header);
             if (parsedData.ContainsKey("Source"))
-                data.Source = parsedData["Source"];
+                parsedData.TryGetValue("File", out data.Source);
             if (parsedData.ContainsKey("File"))
-                data.Path = parsedData["File"];
+                parsedData.TryGetValue("File", out data.Path);
             if (parsedData.ContainsKey("Srvr"))
-                data.Host = parsedData["Srvr"];
+                parsedData.TryGetValue("Srvr", out data.Host);
             if (parsedData.ContainsKey("Port"))
-                data.Port = parsedData["Port"];
+                parsedData.TryGetValue("Port", out data.Port);
             if (parsedData.ContainsKey("Ref"))
-                data.Reference = parsedData["Ref"];
+                parsedData.TryGetValue("Ref", out data.Reference);
             if (parsedData.ContainsKey("Error"))
-                data.Error = parsedData["Error"];
+                parsedData.TryGetValue("Error", out data.Error);
             return data;
         }
 
         private Dictionary<string, string> ParseData(string line, string header, bool isError = false)
         {
-            //split separators:
-            char[] equally = { '=' };
-            char[] semicolon = { ';' };
-            char[] colon = { ':' };
-            char[] quote = { '\"' };
-
             Dictionary<string, string> parsedData = new Dictionary<string, string>();
 
             if (header != "")
@@ -109,7 +116,8 @@ namespace TestServiceCloud
                 string[] Connect = line.Split(equally, 2, StringSplitOptions.RemoveEmptyEntries);
                 string[] SrvrRfrn = Connect[1].Split(semicolon, 2, StringSplitOptions.RemoveEmptyEntries);
                 string[] Reference = { };
-                if (SrvrRfrn.Length == 1) //it's local file
+                bool isLocalFile = SrvrRfrn.Length == 1;
+                if (isLocalFile)
                 {
                     string[] file = SrvrRfrn[0].Split(equally, 2, StringSplitOptions.RemoveEmptyEntries);
                     if (file[0] == "File")
@@ -125,9 +133,11 @@ namespace TestServiceCloud
                     parsedData.Add("Ref", name[0]);
                     string[] Srvr = SrvrRfrn[0].Split(equally, 2, StringSplitOptions.RemoveEmptyEntries);
                     string[] Address = Srvr[1].Split(equally, 2, StringSplitOptions.RemoveEmptyEntries);
-                    if (Address[0].Contains(':')) //remote path have port
+
+                    string[] HostPort = Address[0].Split(colon, 2, StringSplitOptions.RemoveEmptyEntries);
+                    bool hasPort = HostPort.Length > 1;
+                    if (hasPort)
                     {
-                        string[] HostPort = Address[0].Split(colon, 2, StringSplitOptions.RemoveEmptyEntries);
                         parsedData.Add("Srvr", HostPort[0].Replace("\"", ""));
                         parsedData.Add("Port", HostPort[1].Replace("\"", ""));
                     }
